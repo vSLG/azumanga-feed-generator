@@ -9,18 +9,45 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (!isCommit(evt)) return
     const ops = await getOpsByType(evt)
 
-    // This logs the text of every post off the firehose.
-    // Just for fun :)
-    // Delete before actually using
-    for (const post of ops.posts.creates) {
-      console.log(post.record.text)
-    }
-
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
     const postsToCreate = ops.posts.creates
       .filter((create) => {
-        // only alf-related posts
-        return create.record.text.toLowerCase().includes('alf')
+        const filterWordsRegex = [
+          'azumanga',
+          'daioh',
+          'osaka(?:.san)?',
+          'chiyo(?:.chan)?',
+          'sakaki(?:.san)?',
+          'yomi(?:.chan)?',
+          'yukari(?:.sensei)?',
+          'tomo(?:.chan)?',
+        ]
+
+        // First filter post text
+
+        for (const word of filterWordsRegex) {
+          const regex = new RegExp(`\\b${word}\\b`, 'i')
+          if (regex.test(create.record.text.toLocaleLowerCase())) {
+            console.log(`found azumanga post ${create.uri}: ${create.record.text}`)
+            return true
+          }
+        }
+
+        // Then filter embeds with alt text
+
+        if (typeof create.record.embed === 'object' && create.record.embed.images instanceof Array) {
+          create.record.embed.images.forEach((image) => {
+            for (const word of filterWordsRegex) {
+              const regex = new RegExp(`\\b${word}\\b`, 'i')
+              if (regex.test(image.alt.toLocaleLowerCase())) {
+                console.log(`found azumanga image ${create.uri}: ${image.alt}`)
+                return true
+              }
+            }
+          })
+        }
+
+        return false
       })
       .map((create) => {
         // map alf-related posts to a db row
