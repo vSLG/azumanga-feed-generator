@@ -8,11 +8,11 @@ This is a modified version of the [ATProto Feed Generation](https://github.com/b
 - The feed algorithm logic is embedded in the Algo class itself, you don't need to modify subscription.ts
 
 ## Feeds hosted by me
-- [azumanga-daioh](./src/algos/azumanga-daioh.ts): filters Azumanga Daioh content from the whole network
-- [cirno](./src/algos/cirno.ts): filters Cirno content from the whole network
+- [Azumanga Daioh Feed](https://bsky.app/profile/did:plc:7z5kxkio45tyodyukg33tuh2/feed/azumanga-daioh): filters Azumanga Daioh content from the whole network (defined in [azumanga-daioh.ts](./src/algos/azumanga-daioh.ts))
+- [Cirno Feed](https://bsky.app/profile/did:plc:7z5kxkio45tyodyukg33tuh2/feed/cirno): filters Cirno content from the whole network (defined in [cirno.ts](./src/algos/cirno.ts))
 
 ## How to create and publish your own feed algorithm
-1. Create your feed algorithm in [src/algos](./src/algos) extending the Algo class ([src/algos/Algo.ts](./src/algos/Algo.ts))
+1. Create your feed algorithm in [src/algos](./src/algos) extending the Algo class ([src/algos/Algo.ts](./src/algos/algo.ts))
 2. Fill information about in the constructor (example: [src/algos/azumanga-daioh.ts](./src/algos/azumanga-daioh.ts))
 3. Implement the algorithm logic in the `filterPost(post: IncomingPost)` method, returning `true` if the post should be included in the feed, `false` otherwise
 4. Instantiate your class in the [`algos` array](./src/algos/index.ts#L12)
