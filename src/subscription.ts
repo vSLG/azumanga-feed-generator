@@ -1,8 +1,13 @@
+import { algos } from './algos'
+import { deletePostsByUris } from './db/post/post.repository'
+import { insertPost } from './db/post/post.repository'
+import { NewPost } from './db/post/post.table'
 import {
   OutputSchema as RepoEvent,
   isCommit,
 } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
+import { IncomingPost } from './util/types'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {
@@ -10,68 +15,41 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     const ops = await getOpsByType(evt)
 
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
-    const postsToCreate = ops.posts.creates
-      .filter((create) => {
-        const filterWordsRegex = [
-          'azumanga',
-          'daioh',
-          'osaka(?:.san)?',
-          'chiyo(?:.chan)?',
-          'sakaki(?:.san)?',
-          'yomi(?:.chan)?',
-          'yukari(?:.sensei)?',
-          'tomo(?:.chan)?',
-        ]
+    const postsToCreate: IncomingPost[] = ops.posts.creates.map((create) => {
+      const post: IncomingPost = {
+        uri: create.uri,
+        cid: create.cid,
+        author: create.author,
+        text: create.record.text,
+        replyParent: create.record?.reply?.parent.uri ?? null,
+        replyRoot: create.record?.reply?.root.uri ?? null,
+        feeds: 0,
+      }
 
-        // First filter post text
-
-        for (const word of filterWordsRegex) {
-          const regex = new RegExp(`\\b${word}\\b`, 'i')
-          if (regex.test(create.record.text.toLocaleLowerCase())) {
-            console.log(`found azumanga post ${create.uri}: ${create.record.text}`)
-            return true
-          }
+      return post
+    }).filter(async (create) => {
+      for (const algo of algos)
+        if (await algo.filterPost(create)) {
+          create.feeds |= 1 << algo.feed
+          console.log(`Post ${create.uri} by ${create.author} passed filter for ${algo.shortname}`)
         }
 
-        // Then filter embeds with alt text
+      return create.feeds > 0
+    })
 
-        if (typeof create.record.embed === 'object' && create.record.embed.images instanceof Array) {
-          create.record.embed.images.forEach((image) => {
-            for (const word of filterWordsRegex) {
-              const regex = new RegExp(`\\b${word}\\b`, 'i')
-              if (regex.test(image.alt.toLocaleLowerCase())) {
-                console.log(`found azumanga image ${create.uri}: ${image.alt}`)
-                return true
-              }
-            }
-          })
-        }
+    if (postsToDelete.length > 0)
+      await deletePostsByUris(this.db, postsToDelete)
 
-        return false
-      })
-      .map((create) => {
-        // map alf-related posts to a db row
-        return {
-          uri: create.uri,
-          cid: create.cid,
-          replyParent: create.record?.reply?.parent.uri ?? null,
-          replyRoot: create.record?.reply?.root.uri ?? null,
-          indexedAt: new Date().toISOString(),
-        }
-      })
-
-    if (postsToDelete.length > 0) {
-      await this.db
-        .deleteFrom('post')
-        .where('uri', 'in', postsToDelete)
-        .execute()
-    }
     if (postsToCreate.length > 0) {
-      await this.db
-        .insertInto('post')
-        .values(postsToCreate)
-        .onConflict((oc) => oc.doNothing())
-        .execute()
+      const newPosts: NewPost[] = postsToCreate.map((post) => ({
+        uri: post.uri,
+        cid: post.cid,
+        replyParent: post.replyParent,
+        replyRoot: post.replyRoot,
+        feeds: post.feeds,
+      }))
+
+      await insertPost(this.db, newPosts)
     }
   }
 }
