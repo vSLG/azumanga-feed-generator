@@ -1,5 +1,5 @@
 import { PostTable } from './post/post.table';
 
-export interface Database {
+export interface DatabaseSchema {
   post: PostTable
 }
