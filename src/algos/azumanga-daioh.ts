@@ -12,7 +12,7 @@ export class AzumangaDaiohAlgo extends Algo {
     this.displayname = 'Azumanga Daioh Feed'
     this.description = 'This feed filters Azumanga Daioh content from the whole network' +
       `\nRegex: ${this.re}`
-    this.avatar = '../../avatars/azumanga-daioh.png'
+    this.avatar = './avatars/azumanga-daioh.png'
     this.publish = true
   }
 
@@ -28,26 +28,5 @@ export class AzumangaDaiohAlgo extends Algo {
       imageMatches = true
 
     return textMatches || imageMatches
-  }
-
-  public async handler(ctx: AppContext, params: QueryParams): Promise<any> {
-    const res = await getLatestsPostsForFeed(ctx.db, this.feed, params.limit, params.cursor)
-
-    const feed = res.map((row) => ({
-      post: row.uri,
-    }))
-
-    let cursor: string | undefined
-
-    const last = res.at(-1)
-
-    if (last) {
-      cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
-    }
-
-    return {
-      cursor,
-      feed,
-    }
   }
 }

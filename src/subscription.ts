@@ -15,7 +15,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     const ops = await getOpsByType(evt)
 
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
-    const postsToCreate: IncomingPost[] = ops.posts.creates.map((create) => {
+
+    const postsToCreate: IncomingPost[] = (await Promise.all(ops.posts.creates.map(async (create) => {
       const post: IncomingPost = {
         uri: create.uri,
         cid: create.cid,
@@ -26,16 +27,17 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         feeds: 0,
       }
 
-      return post
-    }).filter(async (create) => {
-      for (const algo of algos)
-        if (await algo.filterPost(create)) {
-          create.feeds |= 1 << algo.feed
-          console.log(`Post ${create.uri} by ${create.author} passed filter for ${algo.shortname}`)
-        }
+      const algosToRun = algos.filter((algo) => algo.publish)
 
-      return create.feeds > 0
-    })
+      for (const algo of algosToRun) {
+        if (await algo.filterPost(post)) {
+          console.log(`Post ${post.uri} by ${post.author} matched algo ${algo.shortname}`)
+          post.feeds |= 1 << algo.feed
+        }
+      }
+
+      return post
+    }))).filter((post) => post.feeds > 0)
 
     if (postsToDelete.length > 0)
       await deletePostsByUris(this.db, postsToDelete)
