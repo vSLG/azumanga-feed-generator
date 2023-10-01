@@ -35,7 +35,7 @@ export const getLatestsPostsForFeed = async (
     .selectAll()
     .orderBy('indexedAt', 'desc')
     .orderBy('cid', 'desc')
-    .where(sql`feeds & ${1 << feed}`)
+    .where(sql`feeds & ${1 << feed} != 0`)
     .limit(limit)
 
   if (cursor) {
