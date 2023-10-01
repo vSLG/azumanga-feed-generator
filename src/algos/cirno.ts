@@ -1,19 +1,19 @@
 import { Algo } from './algo'
 import { IncomingPost } from '../util/types'
 
-export class AzumangaDaiohAlgo extends Algo {
+export class CirnoAlgo extends Algo {
   constructor(feed: number) {
     super(feed)
 
-    this.shortname = 'azumanga-daioh'
-    this.displayname = 'Azumanga Daioh Feed'
-    this.description = 'This feed filters Azumanga Daioh content from the whole network' +
+    this.shortname = 'cirno'
+    this.displayname = 'Cirno Feed'
+    this.description = 'This feed filters Cirno (from Touhou) content from the whole network' +
       `\nRegex: ${this.re}`
-    this.avatar = './avatars/azumanga-daioh.png'
+    this.avatar = './avatars/cirno.jpg'
     this.publish = true
   }
 
-  public re = /\b(azumanga|daioh|osaka(?:.san)?|chiyo(?:.chan)?|sakaki(?:.san)?|yomi(?:.chan)?|yukari(?:.sensei)?)\b/i
+  public re = /(cirno|チルノ)/i
 
   public async filterPost(post: IncomingPost): Promise<boolean> {
     const textMatches = this.re.test(post.text)
