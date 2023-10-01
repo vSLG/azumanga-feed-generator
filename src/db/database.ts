@@ -17,6 +17,8 @@ export const connectDb = (connectionString: string): Database => new Kysely<Data
 })
 
 export const migrateToLatest = async (db: Database) => {
+  console.log('Migrating database...')
+
   const migrator = new Migrator({
     db,
     provider: new FileMigrationProvider({
